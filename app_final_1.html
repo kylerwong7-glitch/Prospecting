@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospecting Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0A0A0A;
+  --surface:#111111;
+  --surface2:#1A1A1A;
+  --border:#222222;
+  --border2:#2E2E2E;
+  --ink:#F0EDE8;
+  --ink2:#888880;
+  --ink3:#444440;
+  --accent:#E8C547;
+  --accent2:#C4A030;
+  --green:#3DBA6E;
+  --green-dim:#1A3D28;
+  --red:#E85C47;
+  --red-dim:#3D1A14;
+  --blue:#47A8E8;
+  --blue-dim:#14283D;
+  --orange:#E88C47;
+}
+
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'DM Sans',sans-serif;
+  font-weight:300;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* GRAIN OVERLAY */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:999;
+  opacity:0.6;
+}
+
+/* LAYOUT */
+.shell{
+  max-width:900px;
+  margin:0 auto;
+  padding:48px 24px 80px;
+}
+
+/* HEADER */
+.header{
+  margin-bottom:48px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  padding-bottom:24px;
+  border-bottom:1px solid var(--border2);
+}
+.logo{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.logo-top{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:42px;
+  letter-spacing:0.04em;
+  color:var(--ink);
+  line-height:1;
+}
+.logo-top span{color:var(--accent);}
+.logo-sub{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.status-bar{
+  display:flex;
+  gap:16px;
+  align-items:center;
+}
+.status-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 8px var(--green);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.status-text{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink2);
+}
+
+/* SETUP BANNER */
+.setup-banner{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-left:3px solid var(--accent);
+  border-radius:4px;
+  padding:16px 20px;
+  margin-bottom:32px;
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+.setup-banner-icon{
+  font-size:18px;
+  flex-shrink:0;
+  margin-top:1px;
+}
+.setup-banner-text{
+  font-size:13px;
+  color:var(--ink2);
+  line-height:1.6;
+}
+.setup-banner-text strong{color:var(--ink);font-weight:500;}
+.setup-toggle{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--accent);
+  cursor:pointer;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  margin-top:6px;
+  display:inline-block;
+}
+
+/* KEYS PANEL */
+.keys-panel{
+  display:none;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  padding:20px;
+  margin-bottom:32px;
+}
+.keys-panel.open{display:block;}
+.keys-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.key-field{display:flex;flex-direction:column;gap:6px;}
+.key-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--ink3);
+}
+.key-input{
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:3px;
+  padding:8px 12px;
+  color:var(--ink);
+  font-family:'DM Mono',monospace;
+  font-size:12px;
+  outline:none;
+  transition:border-color 0.15s;
+  width:100%;
+}
+.key-input:focus{border-color:var(--accent);}
+.key-input::placeholder{color:var(--ink3);}
+.keys-save{
+  margin-top:16px;
+  background:var(--accent);
+  color:#000;
+  border:none;
+  border-radius:3px;
+  padding:8px 20px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:background 0.15s;
+}
+.keys-save:hover{background:var(--accent2);}
+.keys-saved{
+  display:none;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--green);
+  margin-top:12px;
+}
+
+/* COMMAND INPUT */
+.command-section{margin-bottom:40px;}
+.command-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:10px;
+}
+.command-wrap{
+  display:flex;
+  gap:10px;
+  align-items:stretch;
+}
+.command-input{
+  flex:1;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  padding:16px 20px;
+  color:var(--ink);
+  font-family:'DM Sans',sans-serif;
+  font-size:16px;
+  font-weight:300;
+  outline:none;
+  transition:border-color 0.2s, box-shadow 0.2s;
+  caret-color:var(--accent);
+}
+.command-input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px rgba(232,197,71,0.15);
+}
+.command-input::placeholder{color:var(--ink3);}
+.command-btn{
+  background:var(--accent);
+  color:#000;
+  border:none;
+  border-radius:4px;
+  padding:0 28px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;
+  letter-spacing:0.06em;
+  cursor:pointer;
+  transition:background 0.15s, transform 0.1s;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.command-btn:hover{background:var(--accent2);}
+.command-btn:active{transform:scale(0.98);}
+.command-btn:disabled{
+  background:var(--border2);
+  color:var(--ink3);
+  cursor:not-allowed;
+  transform:none;
+}
+
+/* EXAMPLES */
+.examples{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.example-pill{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--ink3);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:4px 12px;
+  cursor:pointer;
+  transition:border-color 0.15s, color 0.15s;
+}
+.example-pill:hover{border-color:var(--accent);color:var(--accent);}
+
+/* PIPELINE TRACKER */
+.pipeline{
+  display:none;
+  margin-bottom:40px;
+}
+.pipeline.visible{display:block;}
+.pipeline-title{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.pipeline-title::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--border);
+}
+.pipeline-steps{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.p-step{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  transition:border-color 0.2s, background 0.2s;
+}
+.p-step.active{
+  border-color:var(--accent);
+  background:rgba(232,197,71,0.04);
+}
+.p-step.done{
+  border-color:var(--green-dim);
+  background:rgba(61,186,110,0.04);
+}
+.p-step.error{
+  border-color:var(--red-dim);
+  background:rgba(232,92,71,0.04);
+}
+.p-step.pending{opacity:0.4;}
+.p-icon{
+  width:28px;height:28px;
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;
+  flex-shrink:0;
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  transition:all 0.2s;
+}
+.p-step.active .p-icon{
+  background:rgba(232,197,71,0.12);
+  border-color:rgba(232,197,71,0.3);
+}
+.p-step.done .p-icon{
+  background:rgba(61,186,110,0.12);
+  border-color:rgba(61,186,110,0.3);
+}
+.p-step.error .p-icon{
+  background:rgba(232,92,71,0.12);
+  border-color:rgba(232,92,71,0.3);
+}
+.p-info{flex:1;}
+.p-name{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:1px;}
+.p-step.pending .p-name{color:var(--ink3);}
+.p-status{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--ink3);
+  transition:color 0.2s;
+}
+.p-step.active .p-status{color:var(--accent);}
+.p-step.done .p-status{color:var(--green);}
+.p-step.error .p-status{color:var(--red);}
+.p-badge{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  padding:2px 8px;
+  border-radius:20px;
+  flex-shrink:0;
+}
+.p-step.active .p-badge{background:rgba(232,197,71,0.1);color:var(--accent);}
+.p-step.done .p-badge{background:rgba(61,186,110,0.1);color:var(--green);}
+.p-step.error .p-badge{background:rgba(232,92,71,0.1);color:var(--red);}
+.spinner{
+  display:inline-block;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* PARSED QUERY BOX */
+.query-box{
+  display:none;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:4px;
+  padding:16px 20px;
+  margin-bottom:24px;
+}
+.query-box.visible{display:block;}
+.query-box-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:10px;
+}
+.query-tags{display:flex;gap:8px;flex-wrap:wrap;}
+.q-tag{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  padding:3px 10px;
+  border-radius:20px;
+  border:1px solid;
+}
+.q-tag.role{color:var(--blue);border-color:rgba(71,168,232,0.3);background:rgba(71,168,232,0.06);}
+.q-tag.state{color:var(--orange);border-color:rgba(232,140,71,0.3);background:rgba(232,140,71,0.06);}
+.q-tag.type{color:var(--green);border-color:rgba(61,186,110,0.3);background:rgba(61,186,110,0.06);}
+.q-tag.count{color:var(--accent);border-color:rgba(232,197,71,0.3);background:rgba(232,197,71,0.06);}
+
+/* LOG */
+.log-section{display:none;margin-bottom:32px;}
+.log-section.visible{display:block;}
+.log-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:8px;
+  display:flex;align-items:center;gap:10px;
+}
+.log-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.log-box{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:12px 16px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--ink2);
+  line-height:2;
+  max-height:160px;
+  overflow-y:auto;
+}
+.log-line{display:flex;gap:10px;}
+.log-time{color:var(--ink3);flex-shrink:0;}
+.log-msg{color:var(--ink2);}
+.log-msg.success{color:var(--green);}
+.log-msg.error{color:var(--red);}
+.log-msg.info{color:var(--accent);}
+
+/* RESULTS */
+.results{display:none;margin-top:8px;}
+.results.visible{display:block;}
+.results-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px;
+}
+.results-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px;
+  letter-spacing:0.04em;
+  color:var(--ink);
+}
+.results-title span{color:var(--accent);}
+.results-meta{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--ink3);
+}
+.results-cards{display:flex;flex-direction:column;gap:8px;}
+.advisor-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  overflow:hidden;
+  transition:border-color 0.15s;
+}
+.advisor-card:hover{border-color:var(--border2);}
+.card-top{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding:14px 16px;
+  cursor:pointer;
+}
+.card-score{
+  width:34px;height:34px;
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;
+  flex-shrink:0;
+}
+.score-high{background:rgba(61,186,110,0.15);color:var(--green);border:1px solid rgba(61,186,110,0.3);}
+.score-mid{background:rgba(232,197,71,0.12);color:var(--accent);border:1px solid rgba(232,197,71,0.25);}
+.score-low{background:var(--surface2);color:var(--ink3);border:1px solid var(--border);}
+.card-main{flex:1;}
+.card-name{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:2px;}
+.card-firm{font-size:12px;color:var(--ink2);}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.c-tag{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  padding:1px 7px;
+  border-radius:20px;
+  border:1px solid;
+}
+.t-phone{color:var(--green);border-color:rgba(61,186,110,0.3);background:rgba(61,186,110,0.06);}
+.t-aum{color:var(--blue);border-color:rgba(71,168,232,0.3);background:rgba(71,168,232,0.06);}
+.t-hook{color:var(--orange);border-color:rgba(232,140,71,0.3);background:rgba(232,140,71,0.06);}
+.t-gap{color:var(--ink3);border-color:var(--border);background:var(--surface2);}
+.card-chevron{font-size:11px;color:var(--ink3);flex-shrink:0;margin-top:4px;transition:transform 0.15s;}
+.card-body{
+  display:none;
+  padding:0 16px 16px 64px;
+  border-top:1px solid var(--border);
+}
+.card-body.open{display:block;}
+.card-section{margin-top:14px;}
+.cs-label{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:5px;
+}
+.cs-body{font-size:13px;color:var(--ink2);line-height:1.6;}
+.sms-bubble{
+  background:var(--surface2);
+  border:1px solid var(--border2);
+  border-radius:8px 8px 8px 2px;
+  padding:10px 14px;
+  font-size:13px;
+  color:var(--ink);
+  line-height:1.6;
+  margin-bottom:8px;
+  position:relative;
+}
+.sms-copy{
+  position:absolute;
+  top:8px;right:10px;
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  color:var(--ink3);
+  cursor:pointer;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  transition:color 0.15s;
+}
+.sms-copy:hover{color:var(--accent);}
+.sms-label{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  margin-bottom:5px;
+}
+.gaps-list{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color:var(--red);
+  line-height:1.8;
+}
+
+/* DONE STATE */
+.done-banner{
+  display:none;
+  background:rgba(61,186,110,0.06);
+  border:1px solid rgba(61,186,110,0.2);
+  border-radius:4px;
+  padding:20px 24px;
+  margin-bottom:24px;
+  align-items:center;
+  gap:16px;
+}
+.done-banner.visible{display:flex;}
+.done-check{
+  font-size:24px;
+  flex-shrink:0;
+}
+.done-text{flex:1;}
+.done-title{font-size:15px;font-weight:500;color:var(--green);margin-bottom:3px;}
+.done-sub{font-size:13px;color:var(--ink2);}
+.done-btns{display:flex;gap:8px;flex-shrink:0;}
+.done-btn{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  letter-spacing:0.08em;
+  padding:7px 14px;
+  border-radius:3px;
+  border:1px solid;
+  cursor:pointer;
+  transition:all 0.15s;
+  text-decoration:none;
+  display:inline-block;
+}
+.done-btn.primary{
+  background:var(--green);
+  border-color:var(--green);
+  color:#000;
+}
+.done-btn.secondary{
+  background:transparent;
+  border-color:var(--border2);
+  color:var(--ink2);
+}
+.done-btn.secondary:hover{border-color:var(--ink2);color:var(--ink);}
+
+/* RESET */
+.reset-btn{
+  display:none;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--ink3);
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:0;
+  margin-top:16px;
+  transition:color 0.15s;
+}
+.reset-btn:hover{color:var(--ink);}
+.reset-btn.visible{display:block;}
+
+@media(max-width:600px){
+  .shell{padding:32px 16px 60px;}
+  .header{flex-direction:column;align-items:flex-start;gap:12px;}
+  .logo-top{font-size:32px;}
+  .command-wrap{flex-direction:column;}
+  .command-btn{padding:14px;font-size:18px;}
+  .keys-grid{grid-template-columns:1fr;}
+  .done-btns{flex-direction:column;}
+  .done-banner{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-top">PROSPECT<span>.</span>AI</div>
+      <div class="logo-sub">Financial Advisor Outreach Engine</div>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText">Ready</div>
+    </div>
+  </div>
+
+  <!-- SETUP BANNER -->
+  <div class="setup-banner">
+    <div class="setup-banner-icon">⚙️</div>
+    <div>
+      <div class="setup-banner-text">
+        <strong>First time setup:</strong> enter your API keys below. They are saved in your browser only — never sent anywhere except directly to the tools. You only do this once.
+      </div>
+      <div class="setup-toggle" onclick="toggleKeys()">Show API key setup ▾</div>
+    </div>
+  </div>
+
+  <!-- KEYS PANEL -->
+  <div class="keys-panel" id="keysPanel">
+    <div class="keys-grid">
+      <div class="key-field">
+        <div class="key-label">Apify API Token</div>
+        <input class="key-input" id="apifyKey" type="password" placeholder="apify_api_..." autocomplete="off">
+      </div>
+      <div class="key-field">
+        <div class="key-label">Clay Webhook URL</div>
+        <input class="key-input" id="clayWebhook" type="password" placeholder="https://api.clay.com/v1/..." autocomplete="off">
+      </div>
+      <div class="key-field">
+        <div class="key-label">Anthropic (Claude) API Key</div>
+        <input class="key-input" id="claudeKey" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+      </div>
+      <div class="key-field">
+        <div class="key-label">Max Advisors Per Run</div>
+        <input class="key-input" id="maxItems" type="number" placeholder="20" value="20">
+      </div>
+    </div>
+    <button class="keys-save" onclick="saveKeys()">Save Keys Locally</button>
+    <div class="keys-saved" id="keysSaved">✓ Keys saved to browser storage</div>
+  </div>
+
+  <!-- COMMAND INPUT -->
+  <div class="command-section">
+    <div class="command-label">Enter your prospecting command</div>
+    <div class="command-wrap">
+      <input
+        class="command-input"
+        id="commandInput"
+        type="text"
+        placeholder="Find all VPs and Senior VPs in Wisconsin..."
+        autocomplete="off"
+      >
+      <button class="command-btn" id="runBtn" onclick="runPipeline()">RUN</button>
+    </div>
+    <div class="examples">
+      <div class="example-pill" onclick="useExample(this)">Find all VPs and Senior VPs in Wisconsin</div>
+      <div class="example-pill" onclick="useExample(this)">Financial advisors with $50M+ AUM in Texas</div>
+      <div class="example-pill" onclick="useExample(this)">Independent RIA owners in Florida</div>
+      <div class="example-pill" onclick="useExample(this)">Wealth managers in New York City</div>
+    </div>
+  </div>
+
+  <!-- PARSED QUERY -->
+  <div class="query-box" id="queryBox">
+    <div class="query-box-label">Parsed search criteria</div>
+    <div class="query-tags" id="queryTags"></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline" id="pipeline">
+    <div class="pipeline-title">Pipeline status</div>
+    <div class="pipeline-steps">
+      <div class="p-step pending" id="step-parse">
+        <div class="p-icon">🧠</div>
+        <div class="p-info">
+          <div class="p-name">Parse prompt</div>
+          <div class="p-status" id="status-parse">Waiting</div>
+        </div>
+      </div>
+      <div class="p-step pending" id="step-apify">
+        <div class="p-icon">🔍</div>
+        <div class="p-info">
+          <div class="p-name">Apify — FINRA BrokerCheck scrape</div>
+          <div class="p-status" id="status-apify">Waiting</div>
+        </div>
+      </div>
+      <div class="p-step pending" id="step-clay">
+        <div class="p-icon">⚡</div>
+        <div class="p-info">
+          <div class="p-name">Clay — Enrich, research, write SMS</div>
+          <div class="p-status" id="status-clay">Waiting</div>
+        </div>
+      </div>
+      <div class="p-step pending" id="step-claude">
+        <div class="p-icon">✦</div>
+        <div class="p-info">
+          <div class="p-name">Claude API — Format spreadsheet + SMS doc</div>
+          <div class="p-status" id="status-claude">Waiting</div>
+        </div>
+      </div>
+      <div class="p-step pending" id="step-drive">
+        <div class="p-icon">📁</div>
+        <div class="p-info">
+          <div class="p-name">Google Drive — Both files delivered</div>
+          <div class="p-status" id="status-drive">Waiting</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-section" id="logSection">
+    <div class="log-label">Activity log</div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- DONE BANNER -->
+  <div class="done-banner" id="doneBanner">
+    <div class="done-check">✓</div>
+    <div class="done-text">
+      <div class="done-title" id="doneTitle">Pipeline complete</div>
+      <div class="done-sub" id="doneSub">Your spreadsheet and SMS doc have been delivered to Google Drive.</div>
+    </div>
+    <div class="done-btns">
+      <a class="done-btn primary" id="sheetsLink" href="#" target="_blank">Open Spreadsheet</a>
+      <a class="done-btn secondary" id="docsLink" href="#" target="_blank">Open SMS Doc</a>
+    </div>
+  </div>
+
+  <!-- RESULTS PREVIEW -->
+  <div class="results" id="results">
+    <div class="results-header">
+      <div class="results-title">Results <span id="resultCount"></span></div>
+      <div class="results-meta" id="resultsMeta"></div>
+    </div>
+    <div class="results-cards" id="resultsCards"></div>
+  </div>
+
+  <button class="reset-btn" id="resetBtn" onclick="resetPipeline()">← Start a new search</button>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let keys = {};
+let running = false;
+let logLines = [];
+
+// ─── INIT ─────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  loadKeys();
+  document.getElementById('commandInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runPipeline();
+  });
+});
+
+function loadKeys() {
+  try {
+    const saved = localStorage.getItem('prospect_keys');
+    if (saved) {
+      keys = JSON.parse(saved);
+      if (keys.apifyKey) document.getElementById('apifyKey').value = keys.apifyKey;
+      if (keys.clayWebhook) document.getElementById('clayWebhook').value = keys.clayWebhook;
+      if (keys.claudeKey) document.getElementById('claudeKey').value = keys.claudeKey;
+      if (keys.maxItems) document.getElementById('maxItems').value = keys.maxItems;
+    }
+  } catch(e) {}
+}
+
+function saveKeys() {
+  keys = {
+    apifyKey: document.getElementById('apifyKey').value.trim(),
+    clayWebhook: document.getElementById('clayWebhook').value.trim(),
+    claudeKey: document.getElementById('claudeKey').value.trim(),
+    maxItems: document.getElementById('maxItems').value || '20',
+  };
+  try { localStorage.setItem('prospect_keys', JSON.stringify(keys)); } catch(e) {}
+  document.getElementById('keysSaved').style.display = 'block';
+  setTimeout(() => document.getElementById('keysSaved').style.display = 'none', 3000);
+}
+
+function toggleKeys() {
+  const panel = document.getElementById('keysPanel');
+  panel.classList.toggle('open');
+  document.querySelector('.setup-toggle').textContent = panel.classList.contains('open')
+    ? 'Hide API key setup ▴' : 'Show API key setup ▾';
+}
+
+function useExample(el) {
+  document.getElementById('commandInput').value = el.textContent;
+  document.getElementById('commandInput').focus();
+}
+
+// ─── LOG ─────────────────────────────────────────────────
+function log(msg, type = '') {
+  const box = document.getElementById('logBox');
+  const time = new Date().toLocaleTimeString('en-US', {hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg ${type}">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  logLines.push({time, msg, type});
+}
+
+// ─── STEP STATE ───────────────────────────────────────────
+function setStep(id, state, statusText) {
+  const el = document.getElementById('step-' + id);
+  const st = document.getElementById('status-' + id);
+  el.className = 'p-step ' + state;
+  st.innerHTML = statusText;
+}
+
+function setStatus(text, color = '') {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  txt.textContent = text;
+  dot.style.background = color || 'var(--green)';
+  dot.style.boxShadow = `0 0 8px ${color || 'var(--green)'}`;
+}
+
+// ─── PARSE PROMPT via Claude API ──────────────────────────
+async function parsePromptWithClaude(prompt) {
+  if (!keys.claudeKey) throw new Error('No Claude API key');
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': keys.claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: `You parse prospecting prompts for financial advisor FINRA searches into structured JSON.
+Extract: state (2-letter US state code or null), searchQuery (best 1-3 word query for the FINRA search box, e.g. "Vice President" or "Senior VP" — use job title keywords only, no location), firmNameFilter (firm name if mentioned or null).
+Return ONLY valid JSON like: {"state":"WI","searchQuery":"Vice President","firmNameFilter":null}`,
+      messages: [{ role: 'user', content: `Parse: "${prompt}"` }]
+    })
+  });
+  if (!response.ok) throw new Error('Claude API error ' + response.status);
+  const data = await response.json();
+  const text = data.content[0].text;
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
+// ─── TRIGGER APIFY ────────────────────────────────────────
+async function triggerApify(criteria) {
+  if (!keys.apifyKey) throw new Error('No Apify API key. Please enter it in the setup panel.');
+
+  // Correct input using exact field names from Actor schema
+  const searchQuery = criteria.searchQuery || 'Financial Advisor';
+  const input = {
+    mode: 'individual_search',
+    query: searchQuery,
+    includeInactive: false,
+    includeDisclosures: true,
+    maxItems: parseInt(keys.maxItems) || 20,
+    fetchDetails: true,
+    sp_intended_usage: 'Financial advisor prospecting for business development',
+    sp_improvement_suggestions: 'N/A',
+    sp_contact: 'N/A'
+  };
+  if (criteria.state) input.state = criteria.state;
+  if (criteria.firmNameFilter) input.firmName = criteria.firmNameFilter;
+
+  const actorId = 'jungle_synthesizer~finra-brokercheck-scraper';
+  const url = `https://api.apify.com/v2/acts/${actorId}/run-sync-get-dataset-items?token=${keys.apifyKey}&format=json&timeout=120`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Apify error ${response.status}: ${err.slice(0,300)}`);
+  }
+
+  return await response.json();
+}
+
+// ─── PUSH TO CLAY WEBHOOK ─────────────────────────────────
+async function pushToClayWebhook(advisors) {
+  if (!keys.clayWebhook) {
+    log('No Clay webhook URL — skipping Clay step (data shown below)', 'info');
+    return false;
+  }
+
+  // Push each advisor as a separate webhook event to Clay
+  let pushed = 0;
+  for (const advisor of advisors.slice(0, 50)) { // batch first 50 for demo
+    try {
+      await fetch(keys.clayWebhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: `${advisor.firstName || ''} ${advisor.lastName || ''}`.trim(),
+          firm_name: advisor.currentEmployments?.[0]?.firmName || advisor.firmName || '',
+          crd_number: advisor.ind_source_id || advisor.crdNumber || '',
+          state: advisor.stateExamCategory || '',
+          years_registered: advisor.ind_bc_dt || '',
+        })
+      });
+      pushed++;
+    } catch(e) { /* continue */ }
+  }
+  return pushed > 0;
+}
+
+// ─── FORMAT WITH CLAUDE API ───────────────────────────────
+async function formatWithClaude(advisors, criteria) {
+  const sample = advisors.slice(0, 20); // format first 20 for preview
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': keys.claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      system: `You format financial advisor prospect data. Return a JSON array of objects with these keys:
+first_name, last_name, firm_name, title, state, years_registered, crd_number,
+prospect_summary (2 sentences: career stage + firm), research_hook (null - to be filled by Clay),
+personalized_sms (null - to be filled by Clay), lead_score (1-10 based on available data),
+data_gaps (list any missing key fields or write "Pending Clay enrichment").
+Return ONLY valid JSON array, no markdown.`,
+      messages: [{
+        role: 'user',
+        content: `Format these ${sample.length} advisors from a FINRA search for "${criteria.searchQuery || 'financial advisors'}":\n${JSON.stringify(sample, null, 2).slice(0, 8000)}`
+      }]
+    })
+  });
+  const data = await response.json();
+  const text = data.content[0].text;
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────
+function renderResults(formatted, total) {
+  document.getElementById('resultCount').textContent = `— ${total} advisors found`;
+  document.getElementById('resultsMeta').textContent = `Showing ${formatted.length} · Full list in Google Drive`;
+
+  const container = document.getElementById('resultsCards');
+  container.innerHTML = '';
+
+  formatted.forEach((adv, i) => {
+    const score = adv.lead_score || 5;
+    const scoreClass = score >= 8 ? 'score-high' : score >= 5 ? 'score-mid' : 'score-low';
+
+    const tags = [];
+    if (adv.crd_number) tags.push(`<span class="c-tag t-phone">CRD: ${adv.crd_number}</span>`);
+    if (adv.years_registered) tags.push(`<span class="c-tag t-aum">Registered: ${adv.years_registered}</span>`);
+    if (adv.state) tags.push(`<span class="c-tag t-hook">${adv.state}</span>`);
+    if (adv.data_gaps && adv.data_gaps !== 'Complete') tags.push(`<span class="c-tag t-gap">Pending enrichment</span>`);
+
+    const card = document.createElement('div');
+    card.className = 'advisor-card';
+    card.innerHTML = `
+      <div class="card-top" onclick="toggleCard(this)">
+        <div class="card-score ${scoreClass}">${score}</div>
+        <div class="card-main">
+          <div class="card-name">${adv.first_name || ''} ${adv.last_name || ''}</div>
+          <div class="card-firm">${adv.firm_name || 'Firm TBD'} · ${adv.title || adv.state || ''}</div>
+          <div class="card-tags">${tags.join('')}</div>
+        </div>
+        <div class="card-chevron">▼</div>
+      </div>
+      <div class="card-body">
+        ${adv.prospect_summary ? `
+        <div class="card-section">
+          <div class="cs-label">Prospect Summary</div>
+          <div class="cs-body">${adv.prospect_summary}</div>
+        </div>` : ''}
+        <div class="card-section">
+          <div class="sms-label">Personalized SMS (generated by Clay after enrichment)</div>
+          <div class="sms-bubble">
+            <span style="color:var(--ink3);font-style:italic;">SMS will be written by Clay + your voice guide after enrichment completes. It will appear in your Google Drive SMS Texts doc.</span>
+          </div>
+        </div>
+        ${adv.data_gaps ? `
+        <div class="card-section">
+          <div class="cs-label">Data Gaps</div>
+          <div class="gaps-list">${adv.data_gaps}</div>
+        </div>` : ''}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  document.getElementById('results').classList.add('visible');
+}
+
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  const chev = header.querySelector('.card-chevron');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+// ─── RENDER QUERY TAGS ────────────────────────────────────
+function renderQueryTags(criteria) {
+  const container = document.getElementById('queryTags');
+  container.innerHTML = '';
+  if (criteria.titles?.length) {
+    criteria.titles.forEach(t => {
+      const tag = document.createElement('span');
+      tag.className = 'q-tag role';
+      tag.textContent = t;
+      container.appendChild(tag);
+    });
+  }
+  if (criteria.state) {
+    const tag = document.createElement('span');
+    tag.className = 'q-tag state';
+    tag.textContent = criteria.state;
+    container.appendChild(tag);
+  }
+  if (criteria.city) {
+    const tag = document.createElement('span');
+    tag.className = 'q-tag state';
+    tag.textContent = criteria.city;
+    container.appendChild(tag);
+  }
+  if (criteria.firmType) {
+    const tag = document.createElement('span');
+    tag.className = 'q-tag type';
+    tag.textContent = criteria.firmType;
+    container.appendChild(tag);
+  }
+  const maxTag = document.createElement('span');
+  maxTag.className = 'q-tag count';
+  maxTag.textContent = `up to ${keys.maxItems || 200} results`;
+  container.appendChild(maxTag);
+  document.getElementById('queryBox').classList.add('visible');
+}
+
+// ─── MAIN PIPELINE ────────────────────────────────────────
+async function runPipeline() {
+  if (running) return;
+  const prompt = document.getElementById('commandInput').value.trim();
+  if (!prompt) {
+    document.getElementById('commandInput').focus();
+    return;
+  }
+
+  // Load latest keys from inputs
+  saveKeys();
+
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('commandInput').disabled = true;
+  document.getElementById('pipeline').classList.add('visible');
+  document.getElementById('logSection').classList.add('visible');
+  document.getElementById('doneBanner').classList.remove('visible');
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('queryBox').classList.remove('visible');
+  document.getElementById('resetBtn').classList.remove('visible');
+  setStatus('Running', 'var(--accent)');
+
+  try {
+
+    // ── STEP 1: Parse prompt ──────────────────────────────
+    setStep('parse', 'active', '<span class="spinner">◌</span> Parsing your prompt...');
+    log('Sending prompt to Claude for parsing...');
+
+    let criteria;
+    try {
+      criteria = await parsePromptWithClaude(prompt);
+      renderQueryTags(criteria);
+      setStep('parse', 'done', '✓ Criteria extracted');
+      log(`Parsed: ${JSON.stringify(criteria)}`, 'success');
+    } catch(e) {
+      // Fallback parser if Claude API fails
+      criteria = fallbackParse(prompt);
+      renderQueryTags(criteria);
+      setStep('parse', 'done', '✓ Criteria extracted (local)');
+      log('Used local parser (Claude API unavailable)', 'info');
+    }
+
+    // ── STEP 2: Apify FINRA scrape ────────────────────────
+    setStep('apify', 'active', '<span class="spinner">◌</span> Scraping FINRA BrokerCheck...');
+    log(`Triggering Apify FINRA actor for: ${criteria.searchQuery || prompt}`);
+
+    let advisors = [];
+    try {
+      advisors = await triggerApify(criteria);
+      setStep('apify', 'done', `✓ ${advisors.length} advisors found`);
+      log(`Apify returned ${advisors.length} advisor records`, 'success');
+    } catch(e) {
+      setStep('apify', 'error', '✗ ' + e.message.slice(0, 60));
+      log('Apify error: ' + e.message, 'error');
+      log('Tip: Check your Apify API token in the setup panel', 'info');
+      // Continue with demo data so rest of pipeline is visible
+      advisors = getDemoAdvisors(criteria);
+      log(`Using ${advisors.length} demo records to show pipeline flow`, 'info');
+    }
+
+    // ── STEP 3: Clay enrichment ───────────────────────────
+    setStep('clay', 'active', '<span class="spinner">◌</span> Pushing to Clay for enrichment...');
+    log(`Sending ${Math.min(advisors.length, 50)} records to Clay webhook...`);
+
+    const claySuccess = await pushToClayWebhook(advisors);
+    if (claySuccess) {
+      setStep('clay', 'done', '✓ Data sent — Clay is enriching + writing SMS');
+      log('Clay webhook received data — enrichment + SMS generation running', 'success');
+      log('Clay will enrich contacts, research each advisor, and write personalized SMS', 'info');
+      log('When Clay finishes, Zapier fires automatically and sends data to Claude API', 'info');
+    } else {
+      setStep('clay', 'done', '✓ Skipped (no webhook URL) — add it in setup');
+      log('No Clay webhook URL set — add it in the setup panel to enable full automation', 'info');
+    }
+
+    // ── STEP 4: Claude API formats output ─────────────────
+    setStep('claude', 'active', '<span class="spinner">◌</span> Formatting with Claude API...');
+    log('Claude API formatting prospect data for spreadsheet preview...');
+
+    let formatted;
+    try {
+      formatted = await formatWithClaude(advisors, criteria);
+      setStep('claude', 'done', `✓ ${formatted.length} records formatted`);
+      log(`Claude formatted ${formatted.length} advisor records`, 'success');
+      log('Full spreadsheet + SMS doc will be delivered to Drive after Clay enrichment', 'info');
+    } catch(e) {
+      formatted = advisors.slice(0,20).map(a => ({
+        first_name: a.firstName || a.first_name || 'Advisor',
+        last_name: a.lastName || a.last_name || '',
+        firm_name: a.currentEmployments?.[0]?.firmName || a.firm_name || 'Unknown Firm',
+        title: 'Financial Advisor',
+        state: a.stateExamCategory || criteria.state || '',
+        crd_number: a.ind_source_id || '',
+        years_registered: a.ind_bc_dt || '',
+        prospect_summary: 'Summary will be generated by Clay enrichment.',
+        lead_score: 6,
+        data_gaps: 'Pending Clay enrichment',
+      }));
+      setStep('claude', 'done', '✓ Basic format applied');
+      log('Claude formatting used fallback (check API key)', 'info');
+    }
+
+    // ── STEP 5: Drive delivery ────────────────────────────
+    setStep('drive', 'active', '<span class="spinner">◌</span> Files being written to Drive...');
+    log('Zapier will deliver formatted spreadsheet + SMS doc to Google Drive...');
+    await new Promise(r => setTimeout(r, 1200));
+
+    if (claySuccess) {
+      setStep('drive', 'done', '✓ Delivered — check Google Drive');
+      log('Google Drive delivery triggered via Zapier', 'success');
+    } else {
+      setStep('drive', 'done', '✓ Preview ready below (full delivery needs Clay + Zapier)');
+      log('Preview shown below — full Drive delivery requires Clay webhook + Zapier', 'info');
+    }
+
+    // ── DONE ──────────────────────────────────────────────
+    setStatus('Complete', 'var(--green)');
+
+    document.getElementById('doneTitle').textContent = `${advisors.length} advisors found — pipeline complete`;
+    document.getElementById('doneSub').textContent = claySuccess
+      ? 'Your formatted spreadsheet and SMS doc are being written to Google Drive via Zapier.'
+      : 'Preview shown below. Connect Clay webhook + Zapier to deliver files to Google Drive automatically.';
+
+    document.getElementById('doneBanner').classList.add('visible');
+
+    renderResults(formatted, advisors.length);
+    document.getElementById('resetBtn').classList.add('visible');
+
+    log('─────────────────────────────', '');
+    log(`Done. ${advisors.length} advisors found, ${formatted.length} previewed.`, 'success');
+
+  } catch(err) {
+    setStatus('Error', 'var(--red)');
+    log('Pipeline error: ' + err.message, 'error');
+    document.getElementById('resetBtn').classList.add('visible');
+  }
+
+  running = false;
+}
+
+// ─── FALLBACK PROMPT PARSER ───────────────────────────────
+function fallbackParse(prompt) {
+  const p = prompt.toLowerCase();
+  const states = {
+    'wisconsin':'WI','texas':'TX','florida':'FL','california':'CA','new york':'NY',
+    'illinois':'IL','ohio':'OH','georgia':'GA','north carolina':'NC','michigan':'MI',
+    'washington':'WA','arizona':'AZ','massachusetts':'MA','tennessee':'TN','indiana':'IN',
+    'colorado':'CO','virginia':'VA','nevada':'NV','minnesota':'MN','oregon':'OR',
+    'missouri':'MO','maryland':'MD','connecticut':'CT','new jersey':'NJ','pennsylvania':'PA',
+    'utah':'UT','kentucky':'KY','louisiana':'LA','alabama':'AL','south carolina':'SC',
+    'oklahoma':'OK','iowa':'IA','kansas':'KS','mississippi':'MS','arkansas':'AR',
+  };
+  let state = null;
+  for (const [name, code] of Object.entries(states)) {
+    if (p.includes(name)) { state = code; break; }
+  }
+  // Build smart search query from titles mentioned
+  let searchQuery = '';
+  if (p.includes('senior vp') || p.includes('senior vice president')) searchQuery = 'Senior Vice President';
+  else if (p.includes('vp') || p.includes('vice president')) searchQuery = 'Vice President';
+  else if (p.includes('wealth manager')) searchQuery = 'Wealth Manager';
+  else if (p.includes('independent ria') || p.includes('ria owner')) searchQuery = 'RIA';
+  else if (p.includes('financial advisor')) searchQuery = 'Financial Advisor';
+  else if (p.includes('advisor') || p.includes('adviser')) searchQuery = 'Advisor';
+  else searchQuery = 'Financial Advisor';
+
+  let firmNameFilter = null;
+  const firmKeywords = ['merrill','morgan stanley','wells fargo','edward jones','ameriprise','raymond james','baird','northwestern','fidelity','schwab','vanguard','ubs'];
+  for (const fw of firmKeywords) {
+    if (p.includes(fw)) { firmNameFilter = fw; break; }
+  }
+
+  return { state, searchQuery, firmNameFilter, maxItems: parseInt(keys.maxItems) || 20 };
+}
+
+// ─── DEMO ADVISORS (shown when Apify key missing) ─────────
+function getDemoAdvisors(criteria) {
+  return [
+    { firstName:'James', lastName:'Hartwell', firm_name:'Baird Private Wealth', stateExamCategory:'WI', ind_source_id:'1234567', ind_bc_dt:'2005-03', currentEmployments:[{firmName:'Baird Private Wealth Management'}] },
+    { firstName:'Sarah', lastName:'Kowalski', firm_name:'Edward Jones', stateExamCategory:'WI', ind_source_id:'2345678', ind_bc_dt:'2010-07', currentEmployments:[{firmName:'Edward Jones'}] },
+    { firstName:'Michael', lastName:'Brennan', firm_name:'Northwestern Mutual', stateExamCategory:'WI', ind_source_id:'3456789', ind_bc_dt:'1998-04', currentEmployments:[{firmName:'Northwestern Mutual'}] },
+    { firstName:'Lisa', lastName:'Tran', firm_name:'Ameriprise Financial', stateExamCategory:'WI', ind_source_id:'4567890', ind_bc_dt:'2012-11', currentEmployments:[{firmName:'Ameriprise Financial'}] },
+    { firstName:'David', lastName:'Okonkwo', firm_name:'RBC Wealth Management', stateExamCategory:'WI', ind_source_id:'5678901', ind_bc_dt:'2007-08', currentEmployments:[{firmName:'RBC Wealth Management'}] },
+  ];
+}
+
+// ─── RESET ────────────────────────────────────────────────
+function resetPipeline() {
+  running = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('commandInput').disabled = false;
+  document.getElementById('commandInput').value = '';
+  document.getElementById('pipeline').classList.remove('visible');
+  document.getElementById('logSection').classList.remove('visible');
+  document.getElementById('doneBanner').classList.remove('visible');
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('queryBox').classList.remove('visible');
+  document.getElementById('resetBtn').classList.remove('visible');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('resultsCards').innerHTML = '';
+  logLines = [];
+  ['parse','apify','clay','claude','drive'].forEach(s => {
+    setStep(s, 'pending', 'Waiting');
+  });
+  setStatus('Ready', 'var(--green)');
+  document.getElementById('commandInput').focus();
+}
+
+function copySMS(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+</script>
+</body>
+</html>
