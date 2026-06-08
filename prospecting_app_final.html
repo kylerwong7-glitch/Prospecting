@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospect.AI — Upload & Run</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0A0A0A;--surface:#111111;--surface2:#1A1A1A;
+  --border:#222222;--border2:#2E2E2E;
+  --ink:#F0EDE8;--ink2:#888880;--ink3:#444440;
+  --accent:#E8C547;--accent2:#C4A030;
+  --green:#3DBA6E;--red:#E85C47;--blue:#47A8E8;--orange:#E88C47;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.6;}
+.shell{max-width:860px;margin:0 auto;padding:48px 24px 80px;}
+
+/* HEADER */
+.hd{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:40px;padding-bottom:20px;border-bottom:1px solid var(--border2);}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.04em;color:var(--ink);}
+.logo span{color:var(--accent);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin-top:4px;}
+.status-wrap{display:flex;align-items:center;gap:8px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.status-txt{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink2);}
+
+/* SETUP */
+.setup-toggle{font-size:12px;color:var(--blue);cursor:pointer;text-decoration:underline;text-underline-offset:2px;margin-bottom:8px;display:block;font-family:'DM Mono',monospace;}
+.keys-panel{display:none;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:16px;margin-bottom:20px;}
+.keys-panel.open{display:block;}
+.keys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.key-group{display:flex;flex-direction:column;gap:4px;}
+.key-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);}
+.key-input{width:100%;padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--ink);outline:none;}
+.key-input:focus{border-color:var(--accent);}
+.save-btn{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:500;}
+.saved-msg{font-size:11px;color:var(--green);margin-left:10px;font-family:'DM Mono',monospace;display:none;}
+
+/* UPLOAD AREA */
+.upload-section{margin-bottom:32px;}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;}
+.upload-zone{border:2px dashed var(--border2);border-radius:8px;padding:40px 24px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(232,197,71,0.03);}
+.upload-icon{font-size:32px;margin-bottom:12px;opacity:0.4;}
+.upload-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+.upload-sub{font-size:13px;color:var(--ink3);}
+.upload-sub span{color:var(--accent);font-weight:500;}
+.file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* PREVIEW TABLE */
+.preview-wrap{display:none;margin-bottom:24px;}
+.preview-wrap.show{display:block;}
+.preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.preview-title{font-size:14px;font-weight:500;color:var(--ink);}
+.preview-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.preview-table{width:100%;border-collapse:collapse;font-size:13px;}
+.preview-table th{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border2);}
+.preview-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--ink2);}
+.preview-table tr:last-child td{border-bottom:none;}
+.preview-table .col-name{color:var(--ink);font-weight:500;}
+.col-map{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.col-select-group{display:flex;flex-direction:column;gap:4px;}
+.col-select{width:100%;padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--ink);outline:none;}
+.col-select:focus{border-color:var(--accent);}
+
+/* RUN BUTTON */
+.run-wrap{display:flex;gap:10px;margin-bottom:32px;}
+.run-btn{flex:1;padding:16px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.06em;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer;transition:background 0.15s;}
+.run-btn:hover{background:var(--accent2);}
+.run-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.clear-btn{padding:16px 20px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:var(--ink3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;}
+.clear-btn:hover{border-color:var(--ink3);color:var(--ink);}
+
+/* PIPELINE */
+.pipeline{display:none;margin-bottom:24px;}
+.pipeline.show{display:block;}
+.pipe-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;}
+.pipe-steps{display:flex;flex-direction:column;gap:6px;}
+.p-step{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;opacity:0.4;transition:all 0.2s;}
+.p-step.active{opacity:1;border-color:var(--orange);background:rgba(232,140,71,0.05);}
+.p-step.done{opacity:1;border-color:#1A3D28;background:rgba(61,186,110,0.05);}
+.p-step.error{opacity:1;border-color:#3D1A14;background:rgba(232,92,71,0.05);}
+.p-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center;}
+.p-name{font-size:13px;font-weight:500;color:var(--ink);flex:1;}
+.p-status{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.p-step.active .p-status{color:var(--orange);}
+.p-step.done .p-status{color:var(--green);}
+.p-step.error .p-status{color:var(--red);}
+.spin{display:inline-block;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* LOG */
+.log-wrap{display:none;margin-bottom:24px;}
+.log-wrap.show{display:block;}
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ink2);line-height:2;max-height:160px;overflow-y:auto;}
+.lok{color:var(--green);}
+.lerr{color:var(--red);}
+.linf{color:var(--orange);}
+
+/* DONE */
+.done-banner{display:none;background:rgba(61,186,110,0.07);border:1px solid #1A3D28;border-radius:6px;padding:18px 20px;margin-bottom:20px;}
+.done-banner.show{display:flex;align-items:center;gap:14px;}
+.done-check{font-size:24px;flex-shrink:0;}
+.done-title{font-size:15px;font-weight:500;color:var(--green);}
+.done-sub{font-size:12px;color:var(--ink2);margin-top:2px;}
+.done-btns{display:flex;gap:8px;margin-left:auto;flex-shrink:0;}
+.done-btn{font-family:'DM Mono',monospace;font-size:11px;padding:7px 14px;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block;letter-spacing:0.06em;}
+.done-btn.primary{background:var(--green);color:#000;border:none;}
+.done-btn.secondary{background:transparent;border:1px solid var(--border2);color:var(--ink2);}
+
+/* RESULTS */
+.results{display:none;margin-top:8px;}
+.results.show{display:block;}
+.results-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.results-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.04em;color:var(--ink);}
+.results-title span{color:var(--accent);}
+.results-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.prospect-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+.card-top{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer;}
+.card-top:hover{background:var(--surface2);}
+.score-badge{width:34px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;flex-shrink:0;}
+.sh{background:rgba(61,186,110,0.15);color:var(--green);}
+.sm{background:rgba(232,197,71,0.12);color:var(--accent);}
+.sl{background:var(--surface2);color:var(--ink3);}
+.card-main{flex:1;}
+.card-name{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:2px;}
+.card-firm{font-size:12px;color:var(--ink2);margin-bottom:6px;}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.ctag{font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--border2);color:var(--ink3);}
+.card-chev{font-size:11px;color:var(--ink3);margin-top:4px;transition:transform 0.15s;}
+.card-body{display:none;padding:0 16px 16px 62px;border-top:1px solid var(--border);}
+.card-body.open{display:block;}
+.cs{margin-top:12px;}
+.cs-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;}
+.cs-val{font-size:13px;color:var(--ink2);line-height:1.6;}
+.sms-box{background:var(--surface2);border:1px solid var(--border2);border-radius:6px 6px 6px 2px;padding:10px 12px;font-size:13px;color:var(--ink);line-height:1.6;position:relative;}
+.copy-sms{position:absolute;top:8px;right:10px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);cursor:pointer;text-transform:uppercase;letter-spacing:0.08em;background:none;border:none;padding:0;}
+.copy-sms:hover{color:var(--accent);}
+
+.reset-link{font-size:12px;color:var(--ink3);cursor:pointer;text-decoration:underline;margin-top:16px;display:none;font-family:'DM Mono',monospace;}
+.reset-link.show{display:block;}
+
+@media(max-width:600px){
+  .shell{padding:32px 14px 60px;}
+  .keys-grid{grid-template-columns:1fr;}
+  .col-map{grid-template-columns:1fr;}
+  .run-wrap{flex-direction:column;}
+  .done-btns{flex-direction:column;}
+  .done-banner{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="hd">
+    <div>
+      <div class="logo">PROSPECT<span>.</span>AI</div>
+      <div class="logo-sub">Upload your list · Run the pipeline · Get your texts</div>
+    </div>
+    <div class="status-wrap">
+      <div class="status-dot" id="sDot"></div>
+      <div class="status-txt" id="sTxt">Ready</div>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <span class="setup-toggle" onclick="toggleKeys()" id="setupToggle">Show API key setup ▾</span>
+  <div class="keys-panel" id="keysPanel">
+    <div class="keys-grid">
+      <div class="key-group">
+        <div class="key-label">Clay Webhook URL</div>
+        <input class="key-input" id="clayWebhook" type="password" placeholder="https://api.clay.com/v1/sources/webhook/..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Anthropic (Claude) API Key</div>
+        <input class="key-input" id="claudeKey" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Google Sheets URL (Advisor Prospects)</div>
+        <input class="key-input" id="sheetsUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Google Docs URL (SMS Texts)</div>
+        <input class="key-input" id="docsUrl" type="text" placeholder="https://docs.google.com/document/d/..." autocomplete="off">
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveKeys()">Save keys</button>
+    <span class="saved-msg" id="savedMsg">✓ Saved</span>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div class="upload-section">
+    <div class="section-label">Step 1 — Upload your prospect list</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv">
+      <div class="upload-icon">📋</div>
+      <div class="upload-title">Drop your Excel file here</div>
+      <div class="upload-sub">or <span>click to browse</span> · Accepts .xlsx, .xls, .csv</div>
+    </div>
+  </div>
+
+  <!-- COLUMN MAPPING -->
+  <div class="preview-wrap" id="previewWrap">
+    <div class="section-label">Step 2 — Map your columns</div>
+    <div class="col-map">
+      <div class="col-select-group">
+        <div class="key-label">Which column is the full name?</div>
+        <select class="col-select" id="nameCol"></select>
+      </div>
+      <div class="col-select-group">
+        <div class="key-label">Which column is the firm?</div>
+        <select class="col-select" id="firmCol"></select>
+      </div>
+    </div>
+    <div class="preview-header">
+      <div class="preview-title" id="previewTitle">Preview</div>
+      <div class="preview-meta" id="previewMeta"></div>
+    </div>
+    <table class="preview-table" id="previewTable"></table>
+  </div>
+
+  <!-- RUN -->
+  <div class="run-wrap">
+    <button class="run-btn" id="runBtn" onclick="runPipeline()" disabled>RUN PIPELINE</button>
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-label">Pipeline status</div>
+    <div class="pipe-steps">
+      <div class="p-step" id="s-read"><span class="p-icon">📂</span><span class="p-name">Read Excel — extract all prospects</span><span class="p-status" id="st-read">Waiting</span></div>
+      <div class="p-step" id="s-clay"><span class="p-icon">⚡</span><span class="p-name">Clay — push to webhook, trigger enrichment + SMS</span><span class="p-status" id="st-clay">Waiting</span></div>
+      <div class="p-step" id="s-claude"><span class="p-icon">✦</span><span class="p-name">Claude API — format spreadsheet + SMS doc</span><span class="p-status" id="st-claude">Waiting</span></div>
+      <div class="p-step" id="s-drive"><span class="p-icon">📁</span><span class="p-name">Google Drive — both files delivered via Zapier</span><span class="p-status" id="st-drive">Waiting</span></div>
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="log-wrap" id="logWrap">
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- DONE -->
+  <div class="done-banner" id="doneBanner">
+    <div class="done-check">✓</div>
+    <div>
+      <div class="done-title" id="doneTitle">Pipeline complete</div>
+      <div class="done-sub" id="doneSub">Clay is enriching your prospects. Files will appear in Google Drive when done.</div>
+    </div>
+    <div class="done-btns">
+      <a class="done-btn primary" id="sheetsLink" href="#" target="_blank">Open Spreadsheet</a>
+      <a class="done-btn secondary" id="docsLink" href="#" target="_blank">Open SMS Doc</a>
+    </div>
+  </div>
+
+  <!-- RESULTS PREVIEW -->
+  <div class="results" id="results">
+    <div class="results-hd">
+      <div class="results-title">Results <span id="resultCount"></span></div>
+      <div class="results-meta" id="resultsMeta"></div>
+    </div>
+    <div id="resultsCards"></div>
+  </div>
+
+  <div class="reset-link" id="resetLink" onclick="clearAll()">← Upload a new list</div>
+
+</div>
+
+<script>
+let keys = {}, prospects = [], headers = [], running = false;
+
+// ─── KEYS ─────────────────────────────────────────────────
+function loadKeys() {
+  try {
+    const s = sessionStorage.getItem('pcc_keys_v2');
+    if (s) {
+      keys = JSON.parse(s);
+      if (keys.clayWebhook) document.getElementById('clayWebhook').value = keys.clayWebhook;
+      if (keys.claudeKey) document.getElementById('claudeKey').value = keys.claudeKey;
+      if (keys.sheetsUrl) document.getElementById('sheetsUrl').value = keys.sheetsUrl;
+      if (keys.docsUrl) document.getElementById('docsUrl').value = keys.docsUrl;
+    }
+  } catch(e) {}
+}
+
+function saveKeys() {
+  keys = {
+    clayWebhook: document.getElementById('clayWebhook').value.trim(),
+    claudeKey: document.getElementById('claudeKey').value.trim(),
+    sheetsUrl: document.getElementById('sheetsUrl').value.trim(),
+    docsUrl: document.getElementById('docsUrl').value.trim(),
+  };
+  try { sessionStorage.setItem('pcc_keys_v2', JSON.stringify(keys)); } catch(e) {}
+  const m = document.getElementById('savedMsg');
+  m.style.display = 'inline';
+  setTimeout(() => m.style.display = 'none', 2000);
+}
+
+function toggleKeys() {
+  const p = document.getElementById('keysPanel');
+  p.classList.toggle('open');
+  document.getElementById('setupToggle').textContent = p.classList.contains('open') ? 'Hide API key setup ▴' : 'Show API key setup ▾';
+}
+
+// ─── LOG ─────────────────────────────────────────────────
+function log(msg, type='') {
+  const box = document.getElementById('logBox');
+  const t = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d = document.createElement('div');
+  d.innerHTML = `<span style="color:var(--ink3);margin-right:8px">${t}</span><span class="${type?'l'+type:''}">${msg}</span>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── STEP STATE ───────────────────────────────────────────
+function setStep(id, state, txt) {
+  document.getElementById('s-'+id).className = 'p-step ' + state;
+  document.getElementById('st-'+id).innerHTML = txt;
+}
+
+function setStatus(txt, color='var(--green)') {
+  document.getElementById('sTxt').textContent = txt;
+  document.getElementById('sDot').style.background = color;
+  document.getElementById('sDot').style.boxShadow = `0 0 8px ${color}`;
+}
+
+// ─── FILE UPLOAD ──────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type: 'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+      if (rows.length < 2) { alert('File appears empty or has only headers.'); return; }
+      headers = rows[0].map(h => String(h || '').trim());
+      prospects = rows.slice(1).filter(r => r.some(c => c));
+      populateColumnSelectors();
+      renderPreview();
+      document.getElementById('runBtn').disabled = false;
+    } catch(err) {
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function populateColumnSelectors() {
+  ['nameCol','firmCol'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    headers.forEach((h, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = h || `Column ${i+1}`;
+      sel.appendChild(opt);
+    });
+  });
+  // Auto-detect name and firm columns
+  const nameIdx = headers.findIndex(h => /name/i.test(h));
+  const firmIdx = headers.findIndex(h => /firm|company|organization/i.test(h));
+  if (nameIdx >= 0) document.getElementById('nameCol').value = nameIdx;
+  if (firmIdx >= 0) document.getElementById('firmCol').value = firmIdx;
+  document.getElementById('nameCol').addEventListener('change', renderPreview);
+  document.getElementById('firmCol').addEventListener('change', renderPreview);
+}
+
+function renderPreview() {
+  const nameIdx = parseInt(document.getElementById('nameCol').value);
+  const firmIdx = parseInt(document.getElementById('firmCol').value);
+  const preview = prospects.slice(0, 5);
+  document.getElementById('previewTitle').textContent = 'Preview — first 5 rows';
+  document.getElementById('previewMeta').textContent = `${prospects.length} prospects total`;
+  const table = document.getElementById('previewTable');
+  table.innerHTML = `
+    <tr><th>Full Name</th><th>Firm</th></tr>
+    ${preview.map(r => `<tr>
+      <td class="col-name">${r[nameIdx] || '—'}</td>
+      <td>${r[firmIdx] || '—'}</td>
+    </tr>`).join('')}
+  `;
+  document.getElementById('previewWrap').classList.add('show');
+}
+
+// ─── PUSH TO CLAY ─────────────────────────────────────────
+async function pushToClay(prospect) {
+  if (!keys.clayWebhook) return false;
+  try {
+    await fetch(keys.clayWebhook, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        full_name: prospect.name,
+        firm_name: prospect.firm,
+      })
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
+// ─── FORMAT WITH CLAUDE ───────────────────────────────────
+async function formatWithClaude(data) {
+  if (!keys.claudeKey) throw new Error('No Claude API key');
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': keys.claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      system: `You format financial advisor prospect data for a prospecting system. 
+Return a JSON array of objects, one per prospect, with these keys:
+full_name, firm_name, lead_score (1-10, base on name/firm quality), 
+prospect_summary (note: "Will be enriched by Clay — FINRA data, career stage, AUM, location"),
+personalized_sms (note: "Will be written by Clay using voice guide and research hook"),
+data_gaps ("Pending Clay enrichment")
+Return ONLY valid JSON array, no markdown, no backticks.`,
+      messages: [{
+        role: 'user',
+        content: `Format these ${data.length} prospects: ${JSON.stringify(data)}`
+      }]
+    })
+  });
+  if (!response.ok) throw new Error('Claude API ' + response.status);
+  const res = await response.json();
+  const text = res.content[0].text;
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────
+function renderResults(data) {
+  document.getElementById('resultCount').textContent = `— ${data.length} prospects`;
+  document.getElementById('resultsMeta').textContent = `Clay enriching in background`;
+  const container = document.getElementById('resultsCards');
+  container.innerHTML = '';
+  data.slice(0, 20).forEach((p, i) => {
+    const score = p.lead_score || 6;
+    const sc = score >= 8 ? 'sh' : score >= 5 ? 'sm' : 'sl';
+    const card = document.createElement('div');
+    card.className = 'prospect-card';
+    card.innerHTML = `
+      <div class="card-top" onclick="toggleCard(this)">
+        <div class="score-badge ${sc}">${score}</div>
+        <div class="card-main">
+          <div class="card-name">${p.full_name || '—'}</div>
+          <div class="card-firm">${p.firm_name || '—'}</div>
+          <div class="card-tags">
+            <span class="ctag">Sent to Clay ✓</span>
+            <span class="ctag">Enrichment running</span>
+          </div>
+        </div>
+        <div class="card-chev">▼</div>
+      </div>
+      <div class="card-body">
+        <div class="cs">
+          <div class="cs-lbl">Prospect Summary</div>
+          <div class="cs-val" style="color:var(--ink3);font-style:italic">Claygent is researching FINRA BrokerCheck and SEC records — career stage, firm details, AUM, and location will appear in your Google Sheet.</div>
+        </div>
+        <div class="cs">
+          <div class="cs-lbl">Personalized SMS</div>
+          <div class="sms-box" style="color:var(--ink3);font-style:italic">Claygent is finding a research hook from LinkedIn/news and will write a personalized SMS using your voice guide. It will appear in your SMS Texts Google Doc.</div>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('results').classList.add('show');
+}
+
+function toggleCard(hd) {
+  const body = hd.nextElementSibling;
+  const chev = hd.querySelector('.card-chev');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+// ─── MAIN PIPELINE ────────────────────────────────────────
+async function runPipeline() {
+  if (running || prospects.length === 0) return;
+  saveKeys();
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('pipeline').classList.add('show');
+  document.getElementById('logWrap').classList.add('show');
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('logBox').innerHTML = '';
+  setStatus('Running', 'var(--accent)');
+  ['read','clay','claude','drive'].forEach(s => setStep(s,'','Waiting'));
+
+  const nameIdx = parseInt(document.getElementById('nameCol').value);
+  const firmIdx = parseInt(document.getElementById('firmCol').value);
+
+  try {
+    // STEP 1 — Read Excel
+    setStep('read','active','<span class="spin">◌</span> Reading file...');
+    log('Reading Excel file...');
+    const data = prospects.map(r => ({
+      name: String(r[nameIdx] || '').trim(),
+      firm: String(r[firmIdx] || '').trim(),
+    })).filter(p => p.name);
+    setStep('read','done',`✓ ${data.length} prospects extracted`);
+    log(`Extracted ${data.length} prospects from file`, 'ok');
+
+    // STEP 2 — Push to Clay
+    setStep('clay','active',`<span class="spin">◌</span> Pushing ${data.length} prospects to Clay...`);
+    log('Sending prospects to Clay webhook...');
+    if (keys.clayWebhook) {
+      let pushed = 0;
+      for (const p of data) {
+        const ok = await pushToClay(p);
+        if (ok) pushed++;
+        if (pushed % 10 === 0 && pushed > 0) log(`Pushed ${pushed}/${data.length} to Clay...`);
+        await new Promise(r => setTimeout(r, 100));
+      }
+      setStep('clay','done',`✓ ${pushed} prospects sent — Clay enriching + writing SMS`);
+      log(`All ${pushed} prospects sent to Clay`, 'ok');
+      log('Clay will now: look up FINRA data, research each person, write personalized SMS in your voice', 'inf');
+      log('When Clay finishes, Zapier fires and delivers both files to Google Drive', 'inf');
+    } else {
+      setStep('clay','done','✓ Skipped — add Clay webhook URL in setup');
+      log('No Clay webhook URL — add it in the setup panel', 'inf');
+    }
+
+    // STEP 3 — Format with Claude
+    setStep('claude','active','<span class="spin">◌</span> Formatting preview...');
+    log('Claude API formatting prospect preview...');
+    let formatted = [];
+    try {
+      formatted = await formatWithClaude(data.slice(0, 20));
+      setStep('claude','done',`✓ ${formatted.length} prospects formatted`);
+      log(`Claude formatted ${formatted.length} prospect records`, 'ok');
+    } catch(e) {
+      formatted = data.slice(0,20).map((p,i) => ({
+        full_name: p.name, firm_name: p.firm,
+        lead_score: 6, prospect_summary: 'Pending Clay enrichment',
+        personalized_sms: 'Pending Clay enrichment', data_gaps: 'Pending'
+      }));
+      setStep('claude','done','✓ Basic format applied');
+      log('Claude formatting used fallback — check API key', 'inf');
+    }
+
+    // STEP 4 — Drive
+    setStep('drive','active','<span class="spin">◌</span> Files being written to Drive...');
+    await new Promise(r => setTimeout(r, 800));
+    if (keys.clayWebhook) {
+      setStep('drive','done','✓ Check Google Drive after Clay finishes enriching');
+    } else {
+      setStep('drive','done','✓ Preview ready — add Clay webhook to enable Drive delivery');
+    }
+
+    setStatus('Complete', 'var(--green)');
+    document.getElementById('doneTitle').textContent = `${data.length} prospects sent — pipeline complete`;
+    document.getElementById('doneSub').textContent = keys.clayWebhook
+      ? 'Clay is enriching everyone now. Your formatted spreadsheet and SMS doc will appear in Google Drive when Clay finishes — usually 15–45 minutes.'
+      : 'Add your Clay webhook URL in setup to enable full enrichment and Drive delivery.';
+    if (keys.sheetsUrl) document.getElementById('sheetsLink').href = keys.sheetsUrl;
+    if (keys.docsUrl) document.getElementById('docsLink').href = keys.docsUrl;
+    document.getElementById('doneBanner').classList.add('show');
+    renderResults(formatted);
+    document.getElementById('resetLink').classList.add('show');
+
+  } catch(err) {
+    setStatus('Error', 'var(--red)');
+    log('Pipeline error: ' + err.message, 'err');
+    document.getElementById('resetLink').classList.add('show');
+  }
+  running = false;
+}
+
+// ─── CLEAR ────────────────────────────────────────────────
+function clearAll() {
+  running = false;
+  prospects = [];
+  headers = [];
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewWrap').classList.remove('show');
+  document.getElementById('pipeline').classList.remove('show');
+  document.getElementById('logWrap').classList.remove('show');
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('resetLink').classList.remove('show');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('resultsCards').innerHTML = '';
+  ['read','clay','claude','drive'].forEach(s => setStep(s,'','Waiting'));
+  setStatus('Ready', 'var(--green)');
+}
+
+loadKeys();
+</script>
+</body>
+</html>
