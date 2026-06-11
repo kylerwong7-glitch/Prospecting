@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospect.AI — Upload & Run</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0A0A0A;--surface:#111111;--surface2:#1A1A1A;
+  --border:#222222;--border2:#2E2E2E;
+  --ink:#F0EDE8;--ink2:#888880;--ink3:#444440;
+  --accent:#E8C547;--accent2:#C4A030;
+  --green:#3DBA6E;--red:#E85C47;--blue:#47A8E8;--orange:#E88C47;
+}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.6;}
+.shell{max-width:900px;margin:0 auto;padding:48px 24px 80px;}
+
+.hd{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:40px;padding-bottom:20px;border-bottom:1px solid var(--border2);}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.04em;color:var(--ink);}
+.logo span{color:var(--accent);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin-top:4px;}
+.status-wrap{display:flex;align-items:center;gap:8px;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.status-txt{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink2);}
+
+.setup-toggle{font-size:12px;color:var(--blue);cursor:pointer;text-decoration:underline;text-underline-offset:2px;margin-bottom:8px;display:block;font-family:'DM Mono',monospace;}
+.keys-panel{display:none;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:16px;margin-bottom:20px;}
+.keys-panel.open{display:block;}
+.keys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.key-group{display:flex;flex-direction:column;gap:4px;}
+.key-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);}
+.key-input{width:100%;padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--ink);outline:none;}
+.key-input:focus{border-color:var(--accent);}
+.save-btn{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:7px 16px;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:500;}
+.saved-msg{font-size:11px;color:var(--green);margin-left:10px;font-family:'DM Mono',monospace;display:none;}
+
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;}
+.upload-section{margin-bottom:32px;}
+.upload-zone{border:2px dashed var(--border2);border-radius:8px;padding:40px 24px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(232,197,71,0.03);}
+.upload-icon{font-size:32px;margin-bottom:12px;opacity:0.4;}
+.upload-title{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+.upload-sub{font-size:13px;color:var(--ink3);}
+.upload-sub span{color:var(--accent);font-weight:500;}
+.file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+.preview-wrap{display:none;margin-bottom:24px;}
+.preview-wrap.show{display:block;}
+.preview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.preview-title{font-size:14px;font-weight:500;color:var(--ink);}
+.preview-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+
+/* COLUMN DETECTION STATUS */
+.col-status{background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:14px 16px;margin-bottom:16px;}
+.col-status-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;}
+.col-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.col-tag{font-family:'DM Mono',monospace;font-size:10px;padding:4px 8px;border-radius:3px;text-align:center;}
+.col-found{background:rgba(61,186,110,0.1);border:1px solid rgba(61,186,110,0.3);color:var(--green);}
+.col-missing{background:rgba(232,92,71,0.1);border:1px solid rgba(232,92,71,0.3);color:var(--red);}
+
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;overflow-x:auto;display:block;}
+.preview-table th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink3);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+.preview-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--ink2);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+.preview-table .col-name{color:var(--ink);font-weight:500;}
+
+.run-wrap{display:flex;gap:10px;margin-bottom:32px;}
+.run-btn{flex:1;padding:16px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.06em;background:var(--accent);color:#000;border:none;border-radius:6px;cursor:pointer;transition:background 0.15s;}
+.run-btn:hover{background:var(--accent2);}
+.run-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.clear-btn{padding:16px 20px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;background:transparent;color:var(--ink3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;}
+.clear-btn:hover{border-color:var(--ink3);color:var(--ink);}
+
+.pipeline{display:none;margin-bottom:24px;}
+.pipeline.show{display:block;}
+.pipe-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;}
+.pipe-steps{display:flex;flex-direction:column;gap:6px;}
+.p-step{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;opacity:0.4;transition:all 0.2s;}
+.p-step.active{opacity:1;border-color:var(--orange);background:rgba(232,140,71,0.05);}
+.p-step.done{opacity:1;border-color:#1A3D28;background:rgba(61,186,110,0.05);}
+.p-step.error{opacity:1;border-color:#3D1A14;background:rgba(232,92,71,0.05);}
+.p-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center;}
+.p-name{font-size:13px;font-weight:500;color:var(--ink);flex:1;}
+.p-status{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.p-step.active .p-status{color:var(--orange);}
+.p-step.done .p-status{color:var(--green);}
+.p-step.error .p-status{color:var(--red);}
+.spin{display:inline-block;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.progress-wrap{display:none;margin-bottom:16px;}
+.progress-wrap.show{display:block;}
+.progress-bar-bg{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width 0.3s;}
+.progress-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);margin-top:6px;}
+
+.log-wrap{display:none;margin-bottom:24px;}
+.log-wrap.show{display:block;}
+.log-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ink2);line-height:2;max-height:160px;overflow-y:auto;}
+.lok{color:var(--green);}
+.lerr{color:var(--red);}
+.linf{color:var(--orange);}
+
+.done-banner{display:none;background:rgba(61,186,110,0.07);border:1px solid #1A3D28;border-radius:6px;padding:18px 20px;margin-bottom:20px;}
+.done-banner.show{display:flex;align-items:center;gap:14px;}
+.done-check{font-size:24px;flex-shrink:0;}
+.done-title{font-size:15px;font-weight:500;color:var(--green);}
+.done-sub{font-size:12px;color:var(--ink2);margin-top:2px;}
+.done-btns{display:flex;gap:8px;margin-left:auto;flex-shrink:0;}
+.done-btn{font-family:'DM Mono',monospace;font-size:11px;padding:7px 14px;border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block;letter-spacing:0.06em;}
+.done-btn.primary{background:var(--green);color:#000;border:none;}
+.done-btn.secondary{background:transparent;border:1px solid var(--border2);color:var(--ink2);}
+
+.results{display:none;margin-top:8px;}
+.results.show{display:block;}
+.results-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.results-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.04em;color:var(--ink);}
+.results-title span{color:var(--accent);}
+.results-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);}
+.prospect-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden;}
+.card-top{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;cursor:pointer;}
+.card-top:hover{background:var(--surface2);}
+.card-info{flex:1;}
+.card-name{font-size:14px;font-weight:500;color:var(--ink);margin-bottom:2px;}
+.card-firm{font-size:12px;color:var(--ink2);margin-bottom:4px;}
+.card-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.ctag{font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--border2);color:var(--ink3);}
+.ctag-sent{border-color:rgba(61,186,110,0.3);color:var(--green);background:rgba(61,186,110,0.06);}
+.card-chev{font-size:11px;color:var(--ink3);margin-top:4px;transition:transform 0.15s;}
+.card-body{display:none;padding:0 14px 14px 14px;border-top:1px solid var(--border);}
+.card-body.open{display:block;}
+.card-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.cf{display:flex;flex-direction:column;gap:2px;}
+.cf-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);}
+.cf-val{font-size:12px;color:var(--ink2);}
+.sms-section{margin-top:12px;}
+.sms-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:5px;}
+.sms-box{background:var(--surface2);border:1px solid var(--border2);border-radius:6px 6px 6px 2px;padding:10px 12px;font-size:13px;color:var(--ink);line-height:1.6;font-style:italic;color:var(--ink3);}
+
+.reset-link{font-size:12px;color:var(--ink3);cursor:pointer;text-decoration:underline;margin-top:16px;display:none;font-family:'DM Mono',monospace;}
+.reset-link.show{display:block;}
+
+@media(max-width:600px){
+  .shell{padding:32px 14px 60px;}
+  .keys-grid{grid-template-columns:1fr;}
+  .col-grid{grid-template-columns:repeat(3,1fr);}
+  .run-wrap{flex-direction:column;}
+  .done-btns{flex-direction:column;}
+  .done-banner{flex-direction:column;align-items:flex-start;}
+  .card-fields{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="hd">
+    <div>
+      <div class="logo">PROSPECT<span>.</span>AI</div>
+      <div class="logo-sub">Upload your list · Clay enriches everyone · Get your texts</div>
+    </div>
+    <div class="status-wrap">
+      <div class="status-dot" id="sDot"></div>
+      <div class="status-txt" id="sTxt">Ready</div>
+    </div>
+  </div>
+
+  <span class="setup-toggle" onclick="toggleKeys()" id="setupToggle">Show API key setup ▾</span>
+  <div class="keys-panel" id="keysPanel">
+    <div class="keys-grid">
+      <div class="key-group">
+        <div class="key-label">Clay Webhook URL</div>
+        <input class="key-input" id="clayWebhook" type="password" placeholder="https://api.clay.com/v1/sources/webhook/..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Anthropic (Claude) API Key</div>
+        <input class="key-input" id="claudeKey" type="password" placeholder="sk-ant-api03-..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Google Sheet URL (Advisor Prospects)</div>
+        <input class="key-input" id="sheetsUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/..." autocomplete="off">
+      </div>
+      <div class="key-group">
+        <div class="key-label">Google Doc URL (SMS Texts)</div>
+        <input class="key-input" id="docsUrl" type="text" placeholder="https://docs.google.com/document/d/..." autocomplete="off">
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveKeys()">Save keys</button>
+    <span class="saved-msg" id="savedMsg">✓ Saved</span>
+  </div>
+
+  <div class="upload-section">
+    <div class="section-label">Step 1 — Upload your prospect list</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" class="file-input" id="fileInput" accept=".xlsx,.xls,.csv">
+      <div class="upload-icon">📋</div>
+      <div class="upload-title">Drop your Excel file here</div>
+      <div class="upload-sub">or <span>click to browse</span> · Accepts .xlsx, .xls, .csv</div>
+    </div>
+  </div>
+
+  <div class="preview-wrap" id="previewWrap">
+    <div class="section-label">Step 2 — Review your data</div>
+
+    <div class="col-status">
+      <div class="col-status-title">Columns detected</div>
+      <div class="col-grid" id="colGrid"></div>
+    </div>
+
+    <div class="preview-header">
+      <div class="preview-title" id="previewTitle">Preview</div>
+      <div class="preview-meta" id="previewMeta"></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="preview-table" id="previewTable"></table>
+    </div>
+  </div>
+
+  <div class="run-wrap">
+    <button class="run-btn" id="runBtn" onclick="runPipeline()" disabled>RUN PIPELINE</button>
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-label">Pipeline status</div>
+    <div class="pipe-steps">
+      <div class="p-step" id="s-read"><span class="p-icon">📂</span><span class="p-name">Read Excel — extract all prospects</span><span class="p-status" id="st-read">Waiting</span></div>
+      <div class="p-step" id="s-clay"><span class="p-icon">⚡</span><span class="p-name">Clay — send all prospects to webhook</span><span class="p-status" id="st-clay">Waiting</span></div>
+      <div class="p-step" id="s-done"><span class="p-icon">📁</span><span class="p-name">Google Drive — files delivered after Clay enriches</span><span class="p-status" id="st-done">Waiting</span></div>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">Pushing prospects to Clay...</div>
+  </div>
+
+  <div class="log-wrap" id="logWrap">
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <div class="done-banner" id="doneBanner">
+    <div class="done-check">✓</div>
+    <div>
+      <div class="done-title" id="doneTitle">All prospects sent to Clay</div>
+      <div class="done-sub" id="doneSub">Clay is now enriching everyone — researching FINRA, LinkedIn, AdvisorHub, Barron's, Forbes, and writing personalized SMS texts. Come back in 30-45 minutes.</div>
+    </div>
+    <div class="done-btns">
+      <a class="done-btn primary" id="sheetsLink" href="#" target="_blank">Open Spreadsheet</a>
+      <a class="done-btn secondary" id="docsLink" href="#" target="_blank">Open SMS Doc</a>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="results-hd">
+      <div class="results-title">Sent to Clay <span id="resultCount"></span></div>
+      <div class="results-meta" id="resultsMeta"></div>
+    </div>
+    <div id="resultsCards"></div>
+  </div>
+
+  <div class="reset-link" id="resetLink" onclick="clearAll()">← Upload a new list</div>
+
+</div>
+
+<script>
+// ─── EXPECTED COLUMNS ─────────────────────────────────────
+// Your exact Excel column names
+const EXPECTED_COLS = ['Name','Firm','Yrs/LOS','LOS','#Of Dis.','Title','City','Phone #1','Phone #2','Email'];
+// Which ones Clay needs for enrichment
+const CLAY_COLS = ['Name','Firm'];
+
+let keys = {}, prospects = [], headers = [], colMap = {}, running = false;
+
+// ─── KEYS ─────────────────────────────────────────────────
+function loadKeys() {
+  try {
+    const s = sessionStorage.getItem('pcc_keys_v3');
+    if (s) {
+      keys = JSON.parse(s);
+      if (keys.clayWebhook) document.getElementById('clayWebhook').value = keys.clayWebhook;
+      if (keys.claudeKey) document.getElementById('claudeKey').value = keys.claudeKey;
+      if (keys.sheetsUrl) document.getElementById('sheetsUrl').value = keys.sheetsUrl;
+      if (keys.docsUrl) document.getElementById('docsUrl').value = keys.docsUrl;
+    }
+  } catch(e) {}
+}
+
+function saveKeys() {
+  keys = {
+    clayWebhook: document.getElementById('clayWebhook').value.trim(),
+    claudeKey: document.getElementById('claudeKey').value.trim(),
+    sheetsUrl: document.getElementById('sheetsUrl').value.trim(),
+    docsUrl: document.getElementById('docsUrl').value.trim(),
+  };
+  try { sessionStorage.setItem('pcc_keys_v3', JSON.stringify(keys)); } catch(e) {}
+  const m = document.getElementById('savedMsg');
+  m.style.display = 'inline';
+  setTimeout(() => m.style.display = 'none', 2000);
+}
+
+function toggleKeys() {
+  const p = document.getElementById('keysPanel');
+  p.classList.toggle('open');
+  document.getElementById('setupToggle').textContent = p.classList.contains('open') ? 'Hide API key setup ▴' : 'Show API key setup ▾';
+}
+
+// ─── LOG ─────────────────────────────────────────────────
+function log(msg, type='') {
+  const box = document.getElementById('logBox');
+  const t = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const d = document.createElement('div');
+  d.innerHTML = `<span style="color:var(--ink3);margin-right:8px">${t}</span><span class="${type?'l'+type:''}">${msg}</span>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setStep(id, state, txt) {
+  document.getElementById('s-'+id).className = 'p-step ' + state;
+  document.getElementById('st-'+id).innerHTML = txt;
+}
+
+function setStatus(txt, color='var(--green)') {
+  document.getElementById('sTxt').textContent = txt;
+  document.getElementById('sDot').style.background = color;
+  document.getElementById('sDot').style.boxShadow = `0 0 8px ${color}`;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+// ─── COLUMN DETECTION ────────────────────────────────────
+function detectColumns(hdrs) {
+  colMap = {};
+  // Normalize a string for comparison
+  const norm = s => String(s).toLowerCase().trim().replace(/[.\s#\/]/g, '');
+  
+  EXPECTED_COLS.forEach(expected => {
+    const normExp = norm(expected);
+    // Try exact match first
+    let idx = hdrs.findIndex(h => h === expected);
+    // Then case-insensitive
+    if (idx === -1) idx = hdrs.findIndex(h => h.toLowerCase().trim() === expected.toLowerCase().trim());
+    // Then normalized match (ignoring dots, spaces, slashes, #)
+    if (idx === -1) idx = hdrs.findIndex(h => norm(h) === normExp);
+    // Then fuzzy match
+    if (idx === -1) {
+      const fuzzy = {
+        'name': ['fullname','advisorname','contactname'],
+        'firm': ['firmname','company','organization','employer'],
+        'yrslos': ['years','yrs','yearsofservice','tenure','lengthofservice'],
+        'los': ['los','lengthofservice'],
+        'ofdis': ['disclosures','disc','numdisclosures'],
+        'title': ['jobtitle','position','role'],
+        'city': ['location','officecity','officelocation'],
+        'phone1': ['phone','primaryphone','phone1','mobile','directphone'],
+        'phone2': ['phone2','secondaryphone','altphone'],
+        'email': ['emailaddress','workemail','email'],
+      };
+      const variants = fuzzy[normExp] || [];
+      idx = hdrs.findIndex(h => variants.some(v => norm(h).includes(v)));
+    }
+    colMap[expected] = idx;
+  });
+  return colMap;
+}
+
+function renderColStatus() {
+  const grid = document.getElementById('colGrid');
+  grid.innerHTML = '';
+  EXPECTED_COLS.forEach(col => {
+    const found = colMap[col] !== undefined && colMap[col] >= 0;
+    const div = document.createElement('div');
+    div.className = `col-tag ${found ? 'col-found' : 'col-missing'}`;
+    div.textContent = (found ? '✓ ' : '✗ ') + col;
+    grid.appendChild(div);
+  });
+}
+
+// ─── FILE UPLOAD ──────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (rows.length < 2) { alert('File appears empty or has only headers.'); return; }
+      headers = rows[0].map(h => String(h || '').trim());
+      prospects = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
+      detectColumns(headers);
+      renderColStatus();
+      renderPreview();
+      document.getElementById('runBtn').disabled = false;
+      document.getElementById('previewWrap').classList.add('show');
+    } catch(err) {
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function getVal(row, colName) {
+  const idx = colMap[colName];
+  if (idx === undefined || idx < 0) return '';
+  return String(row[idx] || '').trim();
+}
+
+function renderPreview() {
+  document.getElementById('previewTitle').textContent = `Preview — first 5 rows`;
+  document.getElementById('previewMeta').textContent = `${prospects.length} prospects total`;
+
+  const table = document.getElementById('previewTable');
+  const visibleCols = EXPECTED_COLS.filter(c => colMap[c] >= 0);
+
+  table.innerHTML = `
+    <tr>${visibleCols.map(c => `<th>${c}</th>`).join('')}</tr>
+    ${prospects.slice(0,5).map(r => `<tr>${visibleCols.map(c => {
+      const v = getVal(r, c);
+      const cls = c === 'Name' ? 'col-name' : '';
+      return `<td class="${cls}">${v || '—'}</td>`;
+    }).join('')}</tr>`).join('')}
+  `;
+}
+
+// ─── PUSH TO CLAY ─────────────────────────────────────────
+async function pushToClay(prospect) {
+  if (!keys.clayWebhook) return false;
+  const payload = {};
+  // Send all columns that exist in the file
+  EXPECTED_COLS.forEach(col => {
+    if (colMap[col] >= 0) {
+      // Normalize key names for Clay
+      const keyMap = {
+        'Name': 'full_name',
+        'Firm': 'firm_name',
+        'Yrs/LOS': 'yrs_los',
+        'LOS': 'los',
+        '#Of Dis.': 'num_disclosures',
+        'Title': 'title',
+        'City': 'city',
+        'Phone #1': 'phone_1',
+        'Phone #2': 'phone_2',
+        'Email': 'email',
+      };
+      payload[keyMap[col] || col.toLowerCase().replace(/\s+/g,'_')] = prospect[col] || '';
+    }
+  });
+  try {
+    const r = await fetch(keys.clayWebhook, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+// ─── RENDER RESULTS ───────────────────────────────────────
+function renderResults(sent) {
+  document.getElementById('resultCount').textContent = `— ${sent.length} prospects`;
+  document.getElementById('resultsMeta').textContent = `Clay enriching in background — check Drive in 30-45 min`;
+  const container = document.getElementById('resultsCards');
+  container.innerHTML = '';
+
+  sent.slice(0, 15).forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'prospect-card';
+    card.innerHTML = `
+      <div class="card-top" onclick="toggleCard(this)">
+        <div class="card-info">
+          <div class="card-name">${p.Name || '—'}</div>
+          <div class="card-firm">${p.Firm || '—'}${p.Title ? ' · ' + p.Title : ''}${p.City ? ' · ' + p.City : ''}</div>
+          <div class="card-tags">
+            ${p['Phone #1'] ? `<span class="ctag ctag-sent">📞 ${p['Phone #1']}</span>` : ''}
+            ${p['Yrs/LOS'] ? `<span class="ctag">${p['Yrs/LOS']} yrs</span>` : ''}
+            ${p['#Of Dis'] ? `<span class="ctag">${p['#Of Dis']} disc</span>` : ''}
+            <span class="ctag ctag-sent">Sent to Clay ✓</span>
+          </div>
+        </div>
+        <div class="card-chev">▼</div>
+      </div>
+      <div class="card-body">
+        <div class="card-fields">
+          ${p.Email ? `<div class="cf"><div class="cf-label">Email</div><div class="cf-val">${p.Email}</div></div>` : ''}
+          ${p['Phone #2'] ? `<div class="cf"><div class="cf-label">Phone 2</div><div class="cf-val">${p['Phone #2']}</div></div>` : ''}
+          ${p.LOS ? `<div class="cf"><div class="cf-label">Length of Service</div><div class="cf-val">${p.LOS}</div></div>` : ''}
+          ${p.City ? `<div class="cf"><div class="cf-label">City</div><div class="cf-val">${p.City}</div></div>` : ''}
+        </div>
+        <div class="sms-section">
+          <div class="sms-label">Personalized SMS</div>
+          <div class="sms-box">Clay is researching this advisor on FINRA, LinkedIn, AdvisorHub, Barron's and Forbes — personalized SMS will be written and delivered to your SMS Texts Google Doc when complete.</div>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+
+  if (sent.length > 15) {
+    const more = document.createElement('div');
+    more.style.cssText = 'text-align:center;font-size:12px;color:var(--ink3);padding:12px;font-family:var(--DM Mono)';
+    more.textContent = `+ ${sent.length - 15} more prospects sent to Clay`;
+    container.appendChild(more);
+  }
+  document.getElementById('results').classList.add('show');
+}
+
+function toggleCard(hd) {
+  const body = hd.nextElementSibling;
+  const chev = hd.querySelector('.card-chev');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  chev.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+// ─── MAIN PIPELINE ────────────────────────────────────────
+async function runPipeline() {
+  if (running || prospects.length === 0) return;
+  saveKeys();
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('pipeline').classList.add('show');
+  document.getElementById('logWrap').classList.add('show');
+  document.getElementById('progressWrap').classList.add('show');
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('resultsCards').innerHTML = '';
+  setStatus('Running', 'var(--accent)');
+  ['read','clay','done'].forEach(s => setStep(s,'','Waiting'));
+
+  // Map prospects to objects
+  const data = prospects.map(r => {
+    const obj = {};
+    EXPECTED_COLS.forEach(col => { obj[col] = getVal(r, col); });
+    return obj;
+  }).filter(p => p.Name);
+
+  try {
+    // STEP 1 — Read
+    setStep('read','active','<span class="spin">◌</span> Reading file...');
+    log(`Reading file — found ${data.length} prospects`);
+    await new Promise(r => setTimeout(r, 400));
+    setStep('read','done',`✓ ${data.length} prospects extracted`);
+    log(`Extracted ${data.length} prospects from your Excel`, 'ok');
+
+    // STEP 2 — Push to Clay
+    setStep('clay','active',`<span class="spin">◌</span> Pushing ${data.length} prospects to Clay...`);
+    document.getElementById('progressWrap').classList.add('show');
+
+    if (!keys.clayWebhook) {
+      log('No Clay webhook URL — add it in the setup panel', 'inf');
+      setStep('clay','done','Skipped — add Clay webhook URL in setup');
+    } else {
+      let pushed = 0;
+      let failed = 0;
+      for (let i = 0; i < data.length; i++) {
+        const ok = await pushToClay(data[i]);
+        if (ok) pushed++; else failed++;
+        const pct = Math.round(((i+1)/data.length)*100);
+        setProgress(pct, `Pushing to Clay — ${i+1} of ${data.length} (${pct}%)`);
+        if ((i+1) % 5 === 0) log(`Pushed ${i+1}/${data.length} prospects to Clay...`);
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 150));
+      }
+      setStep('clay','done',`✓ ${pushed} prospects sent to Clay`);
+      log(`Done — ${pushed} sent successfully${failed > 0 ? `, ${failed} failed` : ''}`, 'ok');
+      log('Clay is now: looking up FINRA records, browsing LinkedIn, AdvisorHub, Barron\'s, Forbes for each person', 'inf');
+      log('Clay will write personalized SMS texts in Jeff\'s voice for each advisor with a real hook', 'inf');
+    }
+
+    // STEP 3 — Done
+    setStep('done','active','<span class="spin">◌</span> Waiting for Clay...');
+    await new Promise(r => setTimeout(r, 600));
+    setStep('done','done','✓ Check Google Drive in 30-45 minutes');
+    log('When Clay finishes, your Advisor Prospects spreadsheet and SMS Texts doc will update automatically', 'inf');
+
+    setStatus('Complete', 'var(--green)');
+    document.getElementById('doneTitle').textContent = `${data.length} prospects sent — Clay is working`;
+    if (keys.sheetsUrl) document.getElementById('sheetsLink').href = keys.sheetsUrl;
+    if (keys.docsUrl) document.getElementById('docsLink').href = keys.docsUrl;
+    document.getElementById('doneBanner').classList.add('show');
+    renderResults(data);
+    document.getElementById('resetLink').classList.add('show');
+
+  } catch(err) {
+    setStatus('Error', 'var(--red)');
+    log('Error: ' + err.message, 'err');
+    document.getElementById('resetLink').classList.add('show');
+  }
+  running = false;
+}
+
+// ─── CLEAR ────────────────────────────────────────────────
+function clearAll() {
+  running = false;
+  prospects = []; headers = []; colMap = {};
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewWrap').classList.remove('show');
+  ['pipeline','logWrap','progressWrap','results'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('resetLink').classList.remove('show');
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('resultsCards').innerHTML = '';
+  ['read','clay','done'].forEach(s => setStep(s,'','Waiting'));
+  setStatus('Ready','var(--green)');
+}
+
+loadKeys();
+</script>
+</body>
+</html>
